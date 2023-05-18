@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Repository\CarRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -13,7 +14,7 @@ use Symfony\Component\Routing\Annotation\Route;
 class FrameworkController extends AbstractController
 {
     #[Route('/exercices/framework/1', name: 'exerices_framework_1')]
-    public function welcomeUser(Request $request): JsonResponse
+    public function welcomeUser(Request $request, EntityManagerInterface $em): JsonResponse
     {
 
         if($request->getMethod() === 'POST'){
@@ -59,7 +60,7 @@ class FrameworkController extends AbstractController
                     return $response;
                 }
 
-                $user = $this->getDoctrine()->getRepository(User::class)->findOneBy([
+                $user = $em->getRepository(User::class)->findOneBy([
                     'login' => $foo['login'],
                     'password' => $foo['password']
                 ]);
