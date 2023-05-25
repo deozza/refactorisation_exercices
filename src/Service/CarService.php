@@ -14,11 +14,7 @@ class CarService{
         $this->carRepository = $carRepository;
     }
 
-    public function sellCar($brand, $model, $isManual = true, $engine, $doorNumber, $category, $dateOfBuild, $date, $price, $buyerName, $buyerAddress, $buyerPhone, $buyerEmail){
-
-        $car = new Car();
-        $car->setBrand($brand);
-        $car->setModel($model);
+    public function sellCar(Car $car, $buyerName, $buyerAddress, $buyerPhone, $buyerEmail){
 
         if($isManual == true){
             $car->setGearbox('manual');

@@ -9,15 +9,17 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class RenameExercicesController extends AbstractController
 {
-    #[Route('/exercices/rename/1', name: 'exercices_rename_1', methods: ['POST'])]
-    public function checkIfAuthorized(Request $request): JsonResponse
-    {
-        $variables = json_decode($request->getContent(), 1);
+    const AGE_MINIMUM = 21;
 
-        if($variables['a'] > 20){
-            return new JsonResponse(['result' => 1], 200);
+    #[Route('/exercices/rename/1', name: 'exercices_rename_1', methods: ['POST'])]
+    public function userHasCorrectAge(Request $request): JsonResponse
+    {
+        $age = json_decode($request->getContent(), true)['a'];
+        
+        if($age >= self::AGE_MINIMUM){
+            return new JsonResponse(['result' => true], 200);
         }
 
-        return new JsonResponse(['result' => -1], 403);
+        return new JsonResponse(['result' => false], 403);
     }
 }

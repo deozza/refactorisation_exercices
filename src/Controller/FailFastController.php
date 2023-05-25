@@ -17,20 +17,17 @@ class FailFastController extends AbstractController
     {
         $token = $request->headers->get('Authorization');
 
-        if($token !== null){
-            if(strpos($token, 'superxtrasecrettoken') !== false){
-                $user = $userService->getUserByToken($token);
-                if($user !== null){
-                    return new Response('Hello '.$user, 200);
-                }else{
-                    return new Response('Unauthorized', 401);
-                }
-            }else{
-                return new Response('Unauthorized', 401);
-            }
-        }else{
+        if($token === null || strpos($token, 'superxtrasecrettoken') === false)  {
             return new Response('Unauthorized', 401);
         }
+
+        $user = $userService->getUserByToken($token);
+        if($user === null){
+            return new Response('Unauthorized', 401);
+
+        }
+        
+        return new Response('Hello '.$user, 200);
     }
 
     #[Route('/exercices/failfast/2/{brand}/{model}', name: 'exercices_failfast_2', methods: ['PATCH'])]
@@ -38,44 +35,40 @@ class FailFastController extends AbstractController
     {   
         $token = $request->headers->get('Authorization');
 
-        if($token !== null){
-            if($token === 'iamthecaptainnow'){
-
-                $car = $em->getRepository(Car::class)->findOneBy([
-                    'brand' => $brand,
-                    'model' => $model
-                ]);
-        
-                if($car !== null){
-                    $data = json_decode($request->getContent(), true);
-                    $form = $this->createForm(UpdateCarType::class, $car);
-        
-                    $form->submit($data);
-        
-                    if($form->isValid()){
-
-                        if($car->getGeabox() === 'manual'){
-                            if($car->getEngine() === 'electric'){
-                                return new Response('Invalid data', 400);
-                            }elseif($car->getEngine() === 'hybrid'){
-                                return new Response('Invalid data', 400);
-                            }
-                        }
-
-                        $em->flush();
-        
-                        return new Response('Car updated', 200);
-                    }else{
-                        return new Response('Invalid data', 400);
-                    }
-                }else{
-                    return new Response('Car not found', 404);
-                }
-            }else{
-                return new Response('Forbidden', 403);
-            }
-        }else{
+        if($token === null){
             return new Response('Unauthorized', 401);
         }
+
+        if($token !== 'iamthecaptainnow'){
+            return new Response('Forbidden', 403);
+        }
+
+        $car = $em->getRepository(Car::class)->findOneBy([
+            'brand' => $brand,
+            'model' => $model
+        ]);
+
+        if($car === null){
+            return new Response('Car not found', 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        $form = $this->createForm(UpdateCarType::class, $car);
+
+        $form->submit($data);
+
+        if($form->isValid() === false){
+            return new Response('Invalid data', 400);
+        }
+
+        if($car->getGeabox() === 'manual'){
+            if($car->getEngine() === 'electric' ||  $car->getEngine() === 'hybrid'){
+                return new Response('Invalid data', 400);
+            }
+        }
+
+        $em->flush();
+
+        return new Response('Car updated', 200);            
     }
 }
