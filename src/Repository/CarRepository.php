@@ -35,4 +35,17 @@ class CarRepository extends ServiceEntityRepository
             ->getResult()
         ;
     }
+
+    public function findByFilters(array $filters): array
+    {
+        $qb = $this->createQueryBuilder('c');
+        $parameters = [];
+        foreach($filters as $filterName => $filterValue){
+            $qb->andWhere('c.'.$filterName.' = :'.$filterName);
+            $parameters[$filterName] = $filterValue;
+        }
+
+        $qb->setParameters($parameters);
+        return $qb->getQuery()->getResult();
+    }
 }
