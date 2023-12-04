@@ -12,7 +12,24 @@ class ExtractController extends AbstractController
     #[Route('/exercices/rename/1', name: 'exercices_rename_1', methods: ['GET'])]
     public function checkPlantsAreCompatible(): Response
     {
-        $plantLeft = [
+        $plantLeft = $this->getPlantLeft();
+        $plantRight = $this->getPlantRight();
+
+        $incompatibilities = $this->getListOfIncompatibilities($plantLeft, $plantRight);
+
+        if(empty($incompatibilities)) {
+            $message = 'The plants are compatible';
+            $status = 200;
+            return new JsonResponse($message, $status);
+        } 
+
+        $message = $this->buildMessageAccordingToIncompatibilities($incompatibilities);
+        $status = 400;
+        return new JsonResponse($message, $status);
+    }
+
+    private function getPlantLeft() {
+        return [
             'name' => 'Tomato',
             'soil' => 'clay',
             'exposure' => 'south',
@@ -24,8 +41,10 @@ class ExtractController extends AbstractController
             'maxSoilMoisture' => '100',
             'minSoilMoisture' => '80',
         ];
+    }
 
-        $plantRight = [
+    private function getPlantRight() {
+        return [
             'name' => 'Rose',
             'soil' => 'clay',
             'exposure' => 'south',
@@ -37,63 +56,75 @@ class ExtractController extends AbstractController
             'maxSoilMoisture' => '75',
             'minSoilMoisture' => '55',
         ];
+    }
 
-        $isSoilCompatible = $plantLeft['soil'] == $plantRight['soil'];
-        $isExposureCompatible = $plantLeft['exposure'] == $plantRight['exposure'];
-        $isFertilizerCompatible = $plantLeft['fertilizer'] == $plantRight['fertilizer'];
-        $isWaterCompatible = $plantLeft['water'] == $plantRight['water'];
-        $isSoilPhCompatible = $plantLeft['maxSoilPh'] >= $plantRight['minSoilPh'] && $plantLeft['minSoilPh'] <= $plantRight['maxSoilPh'];
-        $isSoilMoistureCompatible = $plantLeft['maxSoilMoisture'] >= $plantRight['minSoilMoisture'] && $plantLeft['minSoilMoisture'] <= $plantRight['maxSoilMoisture'];
+    private function getListOfIncompatibilities($plantLeft, $plantRight) {
+        $incompatibilities = [];
 
-        $isCompatible = [
-            'isSoilCompatible' => $isSoilCompatible,
-            'isExposureCompatible' => $isExposureCompatible,
-            'isFertilizerCompatible' => $isFertilizerCompatible,
-            'isWaterCompatible' => $isWaterCompatible,
-            'isSoilPhCompatible' => $isSoilPhCompatible,
-            'isSoilMoistureCompatible' => $isSoilMoistureCompatible,
-        ];
+        if (!$this->getSoilCompatibility($plantLeft, $plantRight)) {
+            $incompatibilities[] = 'soil';
+        }
 
-        $status = 200;
-        foreach($isCompatible as $key => $value) {
-            $message = '';
+        if (!$this->getExposureCompatibility($plantLeft, $plantRight)) {
+            $incompatibilities[] = 'exposure';
+        }
 
-            if (!$value) {
-                $status = 400;
+        if (!$this->getFertilizerCompatibility($plantLeft, $plantRight)) {
+            $incompatibilities[] = 'fertilizer';
+        }
 
-                switch($key) {
-                    case 'isSoilCompatible':
-                        $reason = 'soil';
-                        break;
-                    case 'isExposureCompatible':
-                        $reason = 'exposure';
-                        break;
-                    case 'isFertilizerCompatible':
-                        $reason = 'fertilizer';
-                        break;
-                    case 'isWaterCompatible':
-                        $reason = 'water';
-                        break;
-                    case 'isSoilPhCompatible':
-                        $reason = 'soil ph';
-                        break;
-                    case 'isSoilMoistureCompatible':
-                        $reason = 'soil moisture';
-                        break;
-                }
+        if (!$this->getWaterCompatibility($plantLeft, $plantRight)) {
+            $incompatibilities[] = 'water';
+        }
 
-                if(empty($message)) {
-                    $message = 'The plants are not compatible because of ' . $reason;
-                } else {
-                    $message .= ', ' . $key;
-                }
+        if (!$this->getSoilPhCompatibility($plantLeft, $plantRight)) {
+            $incompatibilities[] = 'soil ph';
+        }
+
+        if (!$this->getSoilMoistureCompatibility($plantLeft, $plantRight)) {
+            $incompatibilities[] = 'soil moisture';
+        }
+
+        return $incompatibilities;
+    }
+
+    private function getSoilCompatibility($plantLeft, $plantRight) {
+        return $plantLeft['soil'] === $plantRight['soil'];
+    }
+
+    private function getExposureCompatibility($plantLeft, $plantRight) {
+        return $plantLeft['exposure'] === $plantRight['exposure'];
+    }
+
+    private function getFertilizerCompatibility($plantLeft, $plantRight) {
+        return $plantLeft['fertilizer'] === $plantRight['fertilizer'];
+    }
+
+    private function getWaterCompatibility($plantLeft, $plantRight) {
+        return $plantLeft['water'] === $plantRight['water'];
+    }
+
+    private function getSoilPhCompatibility($plantLeft, $plantRight) {
+        return $plantLeft['maxSoilPh'] >= $plantRight['minSoilPh'] && $plantLeft['minSoilPh'] <= $plantRight['maxSoilPh'];
+    }
+
+    private function getSoilMoistureCompatibility($plantLeft, $plantRight) {
+        return $plantLeft['maxSoilMoisture'] >= $plantRight['minSoilMoisture'] && $plantLeft['minSoilMoisture'] <= $plantRight['maxSoilMoisture'];
+    }
+
+    private function buildMessageAccordingToIncompatibilities($incompatibilities) {
+        $message = '';
+
+        foreach($incompatibilities as $key => $value) {
+            if ($key === 0) {
+                $message .= 'The plants are not compatible because of ' . $value;
+            } else {
+                $message .= ', ' . $value;
             }
         }
 
-        if ($status === 200) {
-            $message = 'The plants are compatible';
-        }
-
-        return new JsonResponse($message, $status);
+        return $message;
     }
+
+
 }
