@@ -19,13 +19,11 @@ class ExtractController extends AbstractController
 
         if(empty($incompatibilities)) {
             $message = 'The plants are compatible';
-            $status = 200;
-            return new JsonResponse($message, $status);
+            return new JsonResponse($message, JsonResponse::HTTP_OK);
         } 
 
         $message = $this->buildMessageAccordingToIncompatibilities($incompatibilities);
-        $status = 400;
-        return new JsonResponse($message, $status);
+        return new JsonResponse($message, JsonResponse::HTTP_BAD_REQUEST);
     }
 
     private function getPlantLeft() {
