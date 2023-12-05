@@ -2,6 +2,8 @@
 
 namespace App\Service;
 
+use App\DTO\BuyerInfosDTO;
+use App\DTO\SellingInfosDTO;
 use App\Repository\CarRepository;
 use App\Entity\Car;
 
@@ -14,30 +16,15 @@ class CarService{
         $this->carRepository = $carRepository;
     }
 
-    public function sellCar($brand, $model, $isManual = true, $engine, $doorNumber, $category, $dateOfBuild, $date, $price, $buyerName, $buyerAddress, $buyerPhone, $buyerEmail){
-
-        $car = new Car();
-        $car->setBrand($brand);
-        $car->setModel($model);
-
-        if($isManual == true){
-            $car->setGearbox('manual');
-        }else{
-            $car->setGearbox('automatic');
-        }
-
-        $car->setEngine($engine);
-        $car->setDoorNumber($doorNumber);
-        $car->setCategory($category);
-
+    public function sellCar(Car $car, SellingInfosDTO $sellingInfos, BuyerInfosDTO $buyerInfos): string {
         $message = 'This ';
 
-        if($dateOfBuild < '1993-01-01'){
+        if($sellingInfos->getDateOfBuild() < '1993-01-01'){
             $message .= 'old ';
         }
 
         $message .= 'car is a ' . $car->getBrand() . ' ' . $car->getModel() . ' with a ' . $car->getEngine() . ' engine. It has ' . $car->getDoorNumber() . ' doors and a ' . $car->getGearbox() . ' gearbox. It is a ' . $car->getCategory() . ' car.';
-        $message .= ' It was built in ' . $dateOfBuild->format('Y') . ' and sold in ' . $date->format('Y') . ' for ' . $price . '€. The buyer is ' . $buyerName . ' who lives at ' . $buyerAddress . '. You can contact him at ' . $buyerPhone . ' or ' . $buyerEmail . '.';
+        $message .= ' It was built in ' . $sellingInfos->getDateOfBuild()->format('Y') . ' and sold in ' . $sellingInfos->getDateSold()->format('Y') . ' for ' . $sellingInfos->getPrice() . '€. The buyer is ' . $buyerInfos->getBuyerName() . ' who lives at ' . $buyerInfos->getBuyerAddress() . '. You can contact him at ' . $buyerInfos->getBuyerPhone() . ' or ' . $buyerInfos->getBuyerEmail() . '.';
         return $message;
     }
 }
