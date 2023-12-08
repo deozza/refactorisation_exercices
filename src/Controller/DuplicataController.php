@@ -18,92 +18,22 @@ class DuplicataController extends AbstractController
         $template = $this->getTemplateById($data['templateId']);
 
         if($data['messageType'] === 'sms'){
-            $to = $data['to'];
-            $body = sprintf($template, $data['to'], $data['from'], $data['body']);
-            $from = $data['from'];
-
-            $message = [
-                'to' => $to,
-                'body' => $body,
-                'from' => $from
-            ];
-
-            return new JsonResponse([
-                'message' => $message
-            ], 201);
+            $message = $this->createSms($template, $data);
         }
 
         if($data['messageType'] === 'email'){
+            $message = $this->createEmail($template, $data);
+        }
 
-            $provider = 'textMailSender';
-
-            if(strpos($template, '<html>') !== false && strpos($template, '</html>') !== false){
-                $provider = 'htmlMailSender';
-            }
-    
-            if(isset($data, 'forcesProvider')){
-                $provider = $data['forcesProvider'];
-            }
-
-            if($provider === 'textMailSender'){
-                if(is_string($data['to'])){
-                    $to = explode(',', $data['to']);
-                }else{
-                    $to = $data['to'];
-                }
-
-                if($data['env'] === 'test'){
-                    $to = 'test@gmail.com';
-                }
-    
-            }
-
-            if($provider === 'htmlMailSender'){                
-                $to = $data['to'];
-
-                if($data['env'] === 'test'){
-                    $to = 'test@gmail.com';
-                }
-            }
-            
-            $body = sprintf($template, $data['to'], $data['from'], $data['body']);
-
-            $message = [
-                'to' => $data['to'],
-                'from' => $data['from'],
-                'subject' => $data['subject'],
-                'body' => $body
-            ];
-
-            if(isset($data['attachment'])){
-                $fileExists = file_exists($data['attachment']);
-
-                if(!$fileExists){
-                    return new JsonResponse([
-                        'message' => 'File not found'
-                    ], 404);
-                }
-
-                $attachment = file_get_contents($data['attachment']);
-
-                if($provider === 'textMailSender'){
-                    $body .= 'Vous trouverez en pièce jointe le fichier';
-                    $message['attachment'] = $attachment;
-                    
-                }
-
-                if($provider === 'htmlMailSender'){
-                    $encodedAttachment = base64_encode($attachment);
-                    $body .= '<p>Vous trouverez en pièce jointe le fichier</p>';
-                    $message['attachment'] = $encodedAttachment;
-                }
-            }    
+        if($message === false) {
+            return new JsonResponse([
+                'message' => 'File not found'
+            ], 404);
         }
 
         return new JsonResponse([
            'message' => $message
         ], 201);
-
     }
 
     private function getTemplateById(int $id): string
@@ -116,5 +46,87 @@ class DuplicataController extends AbstractController
         }
 
         return $htmlTemplate;
+    }
+
+    private function createSms($template, $data) {
+        $to = $data['to'];
+        $body = $this->createBody($template, $data);
+        $from = $data['from'];
+
+        $message = $this->createMessage($to, $body, $from);
+        
+        return $message;
+    }
+
+    private function createEmail($template, $data) {
+        $provider = $this->determineProvider($template, $data);        
+        $body = $this->createBody($template, $data);
+
+        $message = $this->createMessage($data['to'], $body, $data['from']);
+        $message['subject'] = $data['subject'];
+
+
+        // on vérifie si l'utilisateur veut envoyer un pièce jointe
+        if(isset($data['attachment'])){
+            $attachment = $this->getAttachment($data);
+            if($attachment === false) {
+                return false;
+            }
+
+            $bodyWithAttachment = 'Vous trouverez en pièce jointe le fichier';
+
+            // on converti en base64 le fichier et ajouter une phrase en html si c'est htmlMailSender
+            if($provider === 'htmlMailSender'){
+                $$attachment = base64_encode($attachment);
+                $bodyWithAttachment = '<p>'. $bodyWithAttachment .'</p>';
+            }
+
+            $message['attachment'] = $attachment;
+            $body .= $bodyWithAttachment;
+            $message['body'] = $body;
+        } 
+
+        return $message;
+    }
+
+    private function determineProvider($template, $data) {
+        $provider = 'textMailSender';
+
+        if(strpos($template, '<html>') !== false && strpos($template, '</html>') !== false){
+            $provider = 'htmlMailSender';
+        }
+
+        if(isset($data, 'forcesProvider')){
+            $provider = $data['forcesProvider'];
+        }
+
+        return $provider;
+    }
+
+    private function createBody($template, $data) {
+        $body = sprintf($template, $data['to'], $data['from'], $data['body']);
+        return $body;
+    }
+
+    private function createMessage($to, $body, $from) {
+        $message = [
+            'to' => $to,
+            'body' => $body,
+            'from' => $from
+        ];
+
+        return $message;
+    }
+
+    private function getAttachment($data) {
+        // on vérifie que la pièce jointe existe
+        $fileExists = file_exists($data['attachment']);
+        if(!$fileExists){
+            return false;
+        }
+
+        // on affecte $attachment la valeur de la pièce jointe
+        $attachment = file_get_contents($data['attachment']);
+        return $attachment;
     }
 }
